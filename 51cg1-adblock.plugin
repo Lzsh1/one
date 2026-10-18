@@ -1,0 +1,65 @@
+#!name=51cg1 去广告
+#!desc=移除 51cg1.com 及镜像站的列表广告卡、浮动/底部横幅、首页弹窗与推广跳转；同时拦截广告 CDN 素材
+#!author=zqt
+#!date=2026-10-18
+#!system=ios,mac
+#!tag=广告拦截,去广告
+#!type=normal
+
+# ============================================================
+# 站点结构（2026-10-18 实测 best.sswbrknqj.cc 首屏）
+#   列表广告      <article class="ad-item"> 内嵌 #ad-card-N + loadBannerDirect()
+#   浮标广告      #adFloat / .xqbj-component-adfloat 里的 .ai-link-ad
+#   首页弹窗      .recommend-layer（JS 延迟 append，初始 display:none）
+#   底部横幅      section.horizontal-block
+#   广告素材      https://pic.gyezbp.cn/hc237/uploads/default/other/<日期>/<hash>.gif
+#   推广跳转      28 个随机域名（ggtyu341.com、jspku910.com …）
+# ============================================================
+
+[Rule]
+# --- 列表/浮标/弹窗的推广跳转域名 ---
+DOMAIN-SUFFIX,ggtyu341.com,REJECT
+DOMAIN-SUFFIX,jspku910.com,REJECT
+DOMAIN-SUFFIX,qddcjy.com,REJECT
+DOMAIN-SUFFIX,iwangzi.com,REJECT
+DOMAIN-SUFFIX,51baoyang.cc,REJECT
+DOMAIN-SUFFIX,48398379.com,REJECT
+DOMAIN-SUFFIX,67246920.com,REJECT
+DOMAIN-SUFFIX,77997225.com,REJECT
+DOMAIN-SUFFIX,83907133.com,REJECT
+DOMAIN-SUFFIX,2526a0.wd51q64s.cc,REJECT
+DOMAIN-SUFFIX,269e.2690125.cc,REJECT
+DOMAIN-SUFFIX,275e.2750181.cc,REJECT
+DOMAIN-SUFFIX,322t.5836312.cc,REJECT
+DOMAIN-SUFFIX,43d73.itkslbju.cc,REJECT
+DOMAIN-SUFFIX,583a.2578264.cc,REJECT
+DOMAIN-SUFFIX,827a.2454092.cc,REJECT
+DOMAIN-SUFFIX,a9fd.lieqlcelo.cc,REJECT
+DOMAIN-SUFFIX,aace.51luoliao8.com,REJECT
+DOMAIN-SUFFIX,cn785.8d5ck6f.com,REJECT
+DOMAIN-SUFFIX,d98.attpqszf.cc,REJECT
+DOMAIN-SUFFIX,da8a.vrxgnxct.cc,REJECT
+DOMAIN-SUFFIX,e3119.xlvcbxdxk.cc,REJECT
+DOMAIN-SUFFIX,f62.avmftran.cc,REJECT
+DOMAIN-SUFFIX,jd3223.v8xx0m8.me,REJECT
+DOMAIN-SUFFIX,jncx2.yavntsoa.cc,REJECT
+DOMAIN-SUFFIX,mc179.nisq0jy.cc,REJECT
+DOMAIN-SUFFIX,yc5787.qmhuz9w.me,REJECT
+IP-CIDR,154.201.192.169/32,REJECT
+
+# --- 站点自家的广告上报接口 ---
+DOMAIN-SUFFIX,zyudkkup.com,REJECT
+
+# --- 只拦广告素材目录，保留 /upload/ 正文图片 ---
+URL-REGEX,^https?://pic\.gyezbp\.cn/hc237/,REJECT
+
+[MITM]
+hostname = 51cg1.com, *.51cg1.com, sswbrknqj.cc, *.sswbrknqj.cc, pic.gyezbp.cn
+
+[Rewrite]
+# 往 HTML 的 </head> 前插一段 CSS，直接隐藏广告容器。
+# 只匹配页面类 URL，排除 css/js/图片/字体/视频，避免误改二进制响应。
+response if ${url} ~= /^https?:\/\/([^\/]+\.)?(51cg1\.com|sswbrknqj\.cc)\/(?!.*\.(?:css|js|png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|mp4|m3u8))/ then response.body.replace(/<\/head>/i, "<style id=nsadblock>article.ad-item,#adFloat,.xqbj-component-adfloat,.horizontal-block,.recommend-layer,.ai-link-ad{display:none!important}</style></head>")
+
+# 旧版 Loon（< 3.5.1）若提示无法解析上面这行 v2 语法，删掉它，改用下面这行等价的 v1 写法：
+# ^https?:\/\/([^\/]+\.)?(51cg1\.com|sswbrknqj\.cc)\/ response-body-replace-regex <\/head> "<style id=nsadblock>article.ad-item,#adFloat,.xqbj-component-adfloat,.horizontal-block,.recommend-layer,.ai-link-ad{display:none!important}</style></head>"
